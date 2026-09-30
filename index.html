@@ -1,0 +1,962 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>¿Está temblando?</title>
+<meta name="description" content="Responde en un toque si está temblando cerca de tus lugares, con datos del Centro Sismológico Nacional.">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EstáTemblando?">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<script>try{var t=JSON.parse(localStorage.getItem('estatemblando:theme'));if(t==='light'||t==='dark')document.documentElement.setAttribute('data-app-theme',t)}catch(e){}</script>
+<style>
+/* ============================================================
+   TOKENS (colores del sistema iOS). La paleta OSCURA va dos veces y ambas copias deben ser idénticas.
+   THEME_BG (en el script) = --bg de cada tema.
+   ============================================================ */
+:root,html:root[data-app-theme="light"]{
+  color-scheme:light;
+  --bg:#F2F2F7; --surface:#FFFFFF; --surface-2:#E9E9EE;
+  --ink:#000000; --ink-2:#6E6E73; --ink-3:#AEAEB2; --line:#D8D8DD;
+  --accent:#1C1C1E; --on-accent:#FFFFFF;
+  --red:#FF3B30; --red-hi:#FF6A61; --red-lo:#D9261C; --red-glow:rgba(255,59,48,.42);
+  --calm:#248A3D; --calm-hi:#34C759; --bezel:#E3E3E8; --bezel-edge:#D4D4DA; --ghost:#DCDCE1;
+  --glass:rgba(255,255,255,.66); --glass-line:rgba(0,0,0,.07); --glass-hi:rgba(255,255,255,.85);
+  --scrim:rgba(0,0,0,.28); --sheet-shadow:rgba(0,0,0,.16);
+  --toast-bg:#1C1C1E; --toast-ink:#FFFFFF; --toast-act:#FFFFFF;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#000000; --surface:#1C1C1E; --surface-2:#2C2C2E;
+  --ink:#FFFFFF; --ink-2:#98989D; --ink-3:#636366; --line:#38383A;
+  --accent:#F2F2F7; --on-accent:#000000;
+  --red:#FF453A; --red-hi:#FF7068; --red-lo:#C8231A; --red-glow:rgba(255,69,58,.30);
+  --calm:#30D158; --calm-hi:#30D158; --bezel:#1C1C1E; --bezel-edge:#2C2C2E; --ghost:#232325;
+  --glass:rgba(44,44,46,.62); --glass-line:rgba(255,255,255,.10); --glass-hi:rgba(255,255,255,.08);
+  --scrim:rgba(0,0,0,.6); --sheet-shadow:rgba(0,0,0,.6);
+  --toast-bg:#F2F2F7; --toast-ink:#000000; --toast-act:#000000;
+}}
+:root[data-theme="dark"],html:root[data-app-theme="dark"]{
+  color-scheme:dark;
+  --bg:#000000; --surface:#1C1C1E; --surface-2:#2C2C2E;
+  --ink:#FFFFFF; --ink-2:#98989D; --ink-3:#636366; --line:#38383A;
+  --accent:#F2F2F7; --on-accent:#000000;
+  --red:#FF453A; --red-hi:#FF7068; --red-lo:#C8231A; --red-glow:rgba(255,69,58,.30);
+  --calm:#30D158; --calm-hi:#30D158; --bezel:#1C1C1E; --bezel-edge:#2C2C2E; --ghost:#232325;
+  --glass:rgba(44,44,46,.62); --glass-line:rgba(255,255,255,.10); --glass-hi:rgba(255,255,255,.08);
+  --scrim:rgba(0,0,0,.6); --sheet-shadow:rgba(0,0,0,.6);
+  --toast-bg:#F2F2F7; --toast-ink:#000000; --toast-act:#000000;
+}
+
+/* ============================================================ BASE */
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+:root{
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --font-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --b:min(66vw,280px);           /* tamaño del botón antes de preguntar */
+  --b2:min(36vw,150px);          /* tamaño del botón con respuesta */
+  --chips-h:74px;
+  --spring:cubic-bezier(.2,.9,.25,1);
+}
+html{-webkit-text-size-adjust:100%;background:var(--bg)}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;min-height:100%;overflow-x:hidden}
+body.lock{overflow:hidden}
+button,input,textarea,select{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:disabled{cursor:default}
+input,textarea,select{font-size:17px}
+:focus-visible{outline:2px solid var(--ink-2);outline-offset:3px;border-radius:10px}
+.app,.chips,.modal{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+.ic{width:20px;height:20px;flex:none}
+.app{position:relative;overflow-x:hidden}
+
+/* ============================================================ AJUSTES: engranaje casi invisible */
+.gear{position:fixed;top:calc(env(safe-area-inset-top,0px) + 4px);right:max(8px,env(safe-area-inset-right,0px));z-index:25;width:44px;height:44px;display:grid;place-items:center;color:var(--ghost);border-radius:50%}
+.gear .ic{width:24px;height:24px}
+.gear:active{color:var(--ink-3)}
+
+/* ============================================================ ESCENARIO */
+.stage{max-width:520px;margin:0 auto;padding:0 18px calc(var(--chips-h) + 28px + env(safe-area-inset-bottom,0px))}
+.install-slot:empty{display:none}
+.install-slot{padding-top:52px}
+.hero{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:calc(100svh - var(--chips-h) - 30px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
+  transition:min-height .6s var(--spring),padding .6s var(--spring)}
+.has-install .hero{min-height:calc(100svh - var(--chips-h) - 190px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+.asked .hero{min-height:calc(var(--b2) + 76px);padding-top:30px}
+.onb .hero{min-height:0;padding-top:calc(72px + env(safe-area-inset-top,0px))}
+.onb.has-install .hero{padding-top:30px}
+.onb{--b:min(56vw,240px)}
+.hint{margin-top:34px;font-size:16px;color:var(--ink-2);text-align:center;transition:opacity .3s}
+.asked .hint{display:none}
+
+/* ============================================================ EL BOTÓN: domo rojo con bisel */
+.btn-wrap{position:relative;width:var(--b);height:var(--b);display:grid;place-items:center;transition:width .6s var(--spring),height .6s var(--spring)}
+.asked .btn-wrap{width:var(--b2);height:var(--b2)}
+.big{position:relative;width:100%;height:100%;border-radius:50%;color:#fff;
+  background:radial-gradient(120% 115% at 32% 18%,var(--red-hi) 0%,var(--red) 46%,var(--red-lo) 100%);
+  box-shadow:0 0 0 calc(var(--b) * .045) var(--bezel),0 0 0 calc(var(--b) * .045 + 1px) var(--bezel-edge),
+    0 22px 44px -14px var(--red-glow),inset 0 -12px 26px rgba(90,0,0,.28),inset 0 8px 14px rgba(255,255,255,.22);
+  transition:transform .16s ease,box-shadow .16s ease,filter .6s ease,opacity .6s ease}
+.big::before{content:"";position:absolute;left:19%;right:19%;top:6%;height:32%;border-radius:50%;
+  background:linear-gradient(to bottom,rgba(255,255,255,.42),rgba(255,255,255,0));pointer-events:none}
+.big:active{transform:scale(.965);box-shadow:0 0 0 calc(var(--b) * .045) var(--bezel),0 0 0 calc(var(--b) * .045 + 1px) var(--bezel-edge),
+    0 10px 24px -12px var(--red-glow),inset 0 -6px 18px rgba(90,0,0,.34),inset 0 10px 18px rgba(0,0,0,.10)}
+.big-label{position:relative;display:block;font-family:var(--font-display);font-weight:700;letter-spacing:-.01em;line-height:1.08;
+  font-size:clamp(21px,6.3vw,27px);text-shadow:0 1px 2px rgba(80,0,0,.28);transition:font-size .6s var(--spring)}
+.asked .big-label{font-size:clamp(13px,3.9vw,16px)}
+.big.off{filter:saturate(.12) brightness(1.06);opacity:.55}
+@media (prefers-color-scheme:dark){:root:not([data-app-theme="light"]) .big.off{filter:saturate(.18) brightness(.72);opacity:.7}}
+html:root[data-app-theme="dark"] .big.off{filter:saturate(.18) brightness(.72);opacity:.7}
+.wave{position:absolute;inset:0;border-radius:50%;border:2px solid var(--red);opacity:0;pointer-events:none}
+.checking .wave{animation:wave 1.9s cubic-bezier(.1,.6,.3,1) infinite}
+.checking .wave:nth-child(2){animation-delay:.63s}
+.checking .wave:nth-child(3){animation-delay:1.26s}
+@keyframes wave{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.95);opacity:0}}
+.enable .wave:nth-child(1){animation:wave 1.4s cubic-bezier(.1,.6,.3,1) 1}
+
+/* ============================================================ BIENVENIDA */
+.onboard{margin:36px auto 0;max-width:360px;text-align:center}
+.onboard h2{font-family:var(--font-display);font-size:24px;font-weight:700;letter-spacing:-.02em}
+.onboard p{margin-top:8px;font-size:16px;color:var(--ink-2);line-height:1.45}
+.onboard .stack{display:grid;gap:10px;margin-top:22px}
+
+/* ============================================================ RESPUESTA */
+.answer{margin-top:18px;text-align:center}
+.a-title{font-family:var(--font-display);font-weight:700;letter-spacing:-.035em;line-height:1;font-size:clamp(56px,18vw,76px)}
+.a-title.long{font-size:clamp(32px,9vw,44px);letter-spacing:-.025em;line-height:1.05}
+.a-title.pop{animation:pop .5s var(--spring)}
+@keyframes pop{0%{opacity:0;transform:translateY(8px) scale(.97)}100%{opacity:1;transform:none}}
+.a-lead{margin-top:10px;font-size:21px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
+.answer[data-k="no"] .a-lead{color:var(--calm)}
+.answer[data-k="pending"] .a-lead{color:var(--ink-2);font-weight:500}
+.a-basis{margin:12px auto 0;max-width:34ch;font-size:15px;color:var(--ink-2);line-height:1.45}
+.a-watch{margin-top:8px;font-size:13px;color:var(--ink-3)}
+.a-watch:empty,.a-basis:empty{display:none}
+
+/* sismógrafo: la vibración real del celular */
+.seis{margin:16px auto 0;max-width:300px}
+.seis canvas{display:block;width:100%;height:44px}
+.seis-note{margin-top:4px;font-size:13px;color:var(--ink-2)}
+
+/* ============================================================ LISTA DE SISMOS */
+.recent{margin-top:30px}
+.r-title{font-size:15px;font-weight:600;color:var(--ink-2);padding:0 4px 8px}
+.qlist{list-style:none;background:var(--surface);border-radius:14px;overflow:hidden}
+.q+.q .q-row::before{content:"";position:absolute;top:0;left:70px;right:0;height:.5px;background:var(--line)}
+.q-row{position:relative;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;color:inherit;text-decoration:none}
+.q-row:active{background:var(--surface-2)}
+.q-mag{width:44px;height:44px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.q-body{min-width:0}
+.q-place{display:block;font-size:16px;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.q-when{display:block;margin-top:2px;font-size:14px;color:var(--ink-2)}
+.q-p{text-align:right;line-height:1.1}
+.q-p b{display:block;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.q-p small{font-size:12px;color:var(--ink-2)}
+.q-felt{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:var(--surface-2);font-size:11px;font-weight:600;color:var(--ink-2);vertical-align:2px}
+.q-empty{padding:16px 14px;font-size:15px;color:var(--ink-2)}
+.source{margin-top:10px;padding:0 4px;font-size:12px;color:var(--ink-2);line-height:1.45}
+
+/* ============================================================ LUGARES: cápsulas translúcidas */
+.chips{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px 0 calc(12px + env(safe-area-inset-bottom,0px));pointer-events:none}
+.chips::before{content:"";position:absolute;inset:-18px 0 0;background:linear-gradient(to bottom,transparent,var(--bg) 58%);opacity:.92;pointer-events:none}
+.chips-in{position:relative}
+.chips-in{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:6px 16px;max-width:560px;margin:0 auto;pointer-events:auto;justify-content:safe center}
+.chips-in::-webkit-scrollbar{display:none}
+.chip{flex:none;height:40px;padding:0 17px;border-radius:20px;font-size:15px;font-weight:600;color:var(--ink);
+  background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(1.8);backdrop-filter:blur(20px) saturate(1.8);
+  box-shadow:inset 0 0 0 .5px var(--glass-line),inset 0 1px 0 var(--glass-hi),0 6px 18px -8px rgba(0,0,0,.22);transition:transform .15s,background .2s,color .2s}
+.chip:active{transform:scale(.95)}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);box-shadow:0 6px 18px -8px rgba(0,0,0,.35)}
+.chip.add{width:40px;padding:0;display:grid;place-items:center;color:var(--ink-2)}
+
+/* ============================================================ CONTROLES */
+.btn{min-height:48px;border-radius:13px;padding:0 18px;font-size:16px;font-weight:600;background:var(--surface);color:var(--ink);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:inset 0 0 0 .5px var(--line)}
+.btn:active{opacity:.7}
+.btn.primary{background:var(--accent);color:var(--on-accent);box-shadow:none}
+.btn.wide{width:100%}
+.btn.danger{color:var(--red)}
+.btn.armed{background:var(--red);color:#fff;box-shadow:none}
+.btn:disabled{opacity:.4}
+.field{width:100%;height:50px;border-radius:12px;border:0;background:var(--surface);box-shadow:inset 0 0 0 .5px var(--line);padding:0 14px;outline:none;font-size:17px}
+.field:focus{box-shadow:inset 0 0 0 1.5px var(--ink-2)}
+textarea.field{height:auto;padding:12px 14px;resize:vertical}
+.lbl{display:block;margin:22px 4px 8px;font-size:15px;font-weight:600;color:var(--ink-2)}
+.lbl:first-child{margin-top:4px}
+.sugs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.sug{height:34px;padding:0 13px;border-radius:17px;background:var(--surface-2);font-size:14px;font-weight:600;color:var(--ink-2)}
+.or{margin:14px 4px 8px;font-size:14px;color:var(--ink-2)}
+.search{display:flex;gap:8px}
+.search .field{flex:1;min-width:0}
+.results{list-style:none;margin-top:10px;background:var(--surface);border-radius:12px;overflow:hidden}
+.results li+li button{box-shadow:inset 0 .5px 0 var(--line)}
+.results button{width:100%;min-height:48px;padding:10px 14px;text-align:left;font-size:15px;line-height:1.35}
+.results button:active{background:var(--surface-2)}
+.loc-ok{display:flex;align-items:center;gap:10px;min-height:50px;padding:10px 14px;border-radius:12px;background:var(--surface);font-size:15px;font-weight:600;margin-bottom:10px}
+.loc-ok .ic{color:var(--calm-hi)}
+.muted{font-size:14px;color:var(--ink-2);margin:6px 4px 10px}
+.warn{font-size:14px;color:var(--ink);margin:6px 4px 10px}
+.fine{margin:18px 4px 0;font-size:12px;color:var(--ink-2);line-height:1.45}
+.row-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+
+/* ============================================================ HOJAS (estilo iOS) */
+.scrim{position:fixed;inset:0;z-index:45;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity .3s}
+.scrim.on{opacity:1;pointer-events:auto}
+.modal{position:fixed;left:0;right:0;bottom:0;top:calc(env(safe-area-inset-top,0px) + 12px);z-index:50;background:var(--bg);border-radius:14px 14px 0 0;
+  display:flex;flex-direction:column;transform:translateY(106%);transition:transform .4s var(--spring),visibility 0s .4s;visibility:hidden;box-shadow:0 -12px 40px var(--sheet-shadow);max-width:680px;margin:0 auto}
+.modal.on{transform:none;visibility:visible;transition:transform .4s var(--spring)}
+#placeModal{z-index:60}
+.modal::before{content:"";position:absolute;top:6px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:var(--ink-3);opacity:.5}
+.modal-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:16px 8px 8px}
+.modal-head h2{font-size:17px;font-weight:600}
+.mh-btn{justify-self:start;min-height:44px;padding:0 10px;font-size:17px;color:var(--ink-2)}
+.mh-btn.strong{justify-self:end;font-weight:600;color:var(--ink)}
+.mh-btn:disabled{color:var(--ink-3)}
+.modal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.modal-in{max-width:560px;margin:0 auto;padding:8px 16px calc(40px + env(safe-area-inset-bottom,0px))}
+.block{margin-top:26px}
+.block:first-child{margin-top:8px}
+.block h3{font-size:15px;font-weight:600;color:var(--ink-2);margin:0 4px 8px}
+.card{background:var(--surface);border-radius:12px;padding:14px}
+.p{font-size:15px;color:var(--ink-2);line-height:1.5}
+.p+.p{margin-top:8px}
+.p a{color:var(--ink)}
+.plist{list-style:none;background:var(--surface);border-radius:12px;overflow:hidden}
+.prow{display:flex;align-items:center}
+.prow+.prow{box-shadow:inset 0 .5px 0 var(--line)}
+.prow-main{flex:1;min-width:0;min-height:56px;padding:9px 14px;text-align:left}
+.prow-main:active{background:var(--surface-2)}
+.pn{display:block;font-size:17px;font-weight:600}
+.pl{display:block;font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pord{display:flex;padding-right:6px}
+.mini{width:40px;height:44px;display:grid;place-items:center;color:var(--ink-2)}
+.mini:disabled{color:var(--ink-3);opacity:.4}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;padding:2px;border-radius:10px;background:var(--surface-2)}
+.seg button{height:36px;border-radius:8px;font-size:14px;font-weight:600;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.14)}
+.sw-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:0 14px;background:var(--surface);border-radius:12px;font-size:17px}
+.switch{position:relative;width:51px;height:31px;border-radius:16px;background:var(--surface-2);transition:background .25s;flex:none}
+.switch span{position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25);transition:transform .25s var(--spring)}
+.switch[aria-checked="true"]{background:var(--calm-hi)}
+.switch[aria-checked="true"] span{transform:translateX(20px)}
+.sw-note{margin:8px 4px 0}
+
+/* instalación (de la skill) */
+.install{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--surface);border-radius:14px;padding:12px 6px 12px 12px}
+.install img{width:46px;height:46px;border-radius:11px;display:block}
+.install h3{font-size:15px;font-weight:600}
+.install p{font-size:13px;color:var(--ink-2);line-height:1.4;margin-top:2px}
+.install .btn{margin-top:8px;min-height:36px}
+.install .x{width:36px;height:36px;display:grid;place-items:center;color:var(--ink-3);align-self:start}
+
+.toast{position:fixed;left:50%;bottom:calc(var(--chips-h) + 18px + env(safe-area-inset-bottom,0px));z-index:70;display:flex;align-items:center;gap:16px;max-width:calc(100% - 32px);padding:12px 14px 12px 16px;border-radius:14px;background:var(--toast-bg);color:var(--toast-ink);font-size:15px;font-weight:600;box-shadow:0 14px 30px -12px rgba(0,0,0,.55);opacity:0;transform:translate(-50%,16px);pointer-events:none;transition:opacity .2s,transform .25s}
+.toast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast-act{color:var(--toast-act);font-weight:700;padding:2px;text-decoration:underline;text-underline-offset:3px}
+body.lock .toast{bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .checking .big{animation:breathe 1.6s ease-in-out infinite!important;animation-duration:1.6s!important;animation-iteration-count:infinite!important}
+  @keyframes breathe{50%{opacity:.78}}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <button type="button" class="gear" data-act="settings" aria-label="Ajustes" data-icon="gear"></button>
+  <main class="stage" id="stage">
+    <div class="install-slot" id="installSlot"></div>
+    <div class="hero" id="hero">
+      <div class="btn-wrap" id="btnWrap">
+        <span class="wave" aria-hidden="true"></span><span class="wave" aria-hidden="true"></span><span class="wave" aria-hidden="true"></span>
+        <button type="button" class="big" id="big" data-act="big"><span class="big-label">¿Está<br>temblando?</span></button>
+      </div>
+      <p class="hint" id="hint" hidden>Tócalo cuando sientas algo.</p>
+    </div>
+    <section class="onboard" id="onboard" hidden>
+      <h2>Primero, guarda tu casa</h2>
+      <p>Así sé qué temblores se pueden sentir ahí. La ubicación queda guardada solo en este teléfono.</p>
+      <div class="stack">
+        <button type="button" class="btn primary wide" data-act="onb-gps" data-icon="locate">Usar mi ubicación actual</button>
+        <button type="button" class="btn wide" data-act="onb-search" data-icon="search">Buscar dirección</button>
+      </div>
+      <p class="muted" id="onbMsg" role="status"></p>
+    </section>
+    <section class="answer" id="answer" hidden aria-live="polite">
+      <h1 class="a-title" id="aTitle"></h1>
+      <p class="a-lead" id="aLead"></p>
+      <div class="seis" id="seis" hidden><canvas id="seisCv" aria-hidden="true"></canvas><p class="seis-note" id="seisNote"></p></div>
+      <p class="a-basis" id="aBasis"></p>
+      <p class="a-watch" id="aWatch"></p>
+    </section>
+    <section class="recent" id="recent" hidden>
+      <h2 class="r-title" id="rTitle"></h2>
+      <ul class="qlist" id="qList"></ul>
+      <p class="source" id="source"></p>
+    </section>
+  </main>
+  <nav class="chips" id="chips" aria-label="Lugares" hidden><div class="chips-in" id="chipsIn"></div></nav>
+</div>
+
+<div class="scrim" id="scrim" data-act="modal-close"></div>
+<div class="modal" id="settingsModal" inert role="dialog" aria-modal="true" aria-labelledby="smTitle">
+  <div class="modal-head"><span></span><h2 id="smTitle">Ajustes</h2><button type="button" class="mh-btn strong" data-act="settings-close">Listo</button></div>
+  <div class="modal-body"><div class="modal-in" id="smBody"></div></div>
+</div>
+<div class="modal" id="placeModal" inert role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+  <div class="modal-head"><button type="button" class="mh-btn" data-act="place-cancel">Cancelar</button><h2 id="pmTitle">Nuevo lugar</h2><button type="button" class="mh-btn strong" data-act="place-save" id="pmSave" disabled>Guardar</button></div>
+  <div class="modal-body"><div class="modal-in" id="pmBody"></div></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+const MODE='web';               /* build.py lo cambia a 'web' en la versión instalable */
+const WEB=MODE==='web';
+const APP_ID='estatemblando';  /* prefijo de los datos en el teléfono: no cambiarlo nunca */
+const COLS=['places'];
+const VERSION='1.0';
+/* Dirección del Worker de Cloudflare (tu intermediario de datos del CSN).
+   Reemplaza TU-SUBDOMINIO por el tuyo. Mientras no esté, la app usa los registros internacionales de respaldo. */
+const API_URL='https://estatemblando.TU-SUBDOMINIO.workers.dev';
+
+/*CORE-START*/
+/* Lógica pura, sin DOM. Se prueba en Node:  TZ=America/Santiago node test.js */
+const CFG={
+  WINDOW_MIN:15,     /* "¿está temblando?" mira los sismos de los últimos 15 min */
+  FUTURE_MIN:2,      /* tolerancia por diferencias de reloj */
+  P_SI:.70, P_QUIZAS:.30, P_BAJA:.05,
+  LIST_DAYS:7, LIST_MIN_P:.10, LIST_N:3,
+  FELT_MMI:2.5,      /* "se siente": Mercalli entre II y III (alguien en reposo lo nota) */
+  CHILE_OFFSET:.5,   /* ajuste del modelo con sismos chilenos reales (ver notas) */
+  RECHECK_S:30, RECHECK_MIN:10, WEEK_TTL_MIN:60
+};
+/* Notas de calibración (sep 2026): el modelo sin ajuste subestima ~0,5–1 grado en Chile.
+   M4.8 Farellones (18-09-2026, 100 km prof.): Santiago observado III (modelo 2,5); Rancagua III (2,1); San Fernando II (1,8).
+   M3.8 frente a Quintero (27-08-2026, 29 km): Huechuraba II (0,9); Curauma III (2,0); Papudo II (2,1). */
+const TZ='America/Santiago';
+function toRad(d){return d*Math.PI/180}
+function distKm(a,b,c,d){const dLat=toRad(c-a),dLon=toRad(d-b),x=Math.sin(dLat/2)**2+Math.cos(toRad(a))*Math.cos(toRad(c))*Math.sin(dLon/2)**2;return 2*6371*Math.asin(Math.min(1,Math.sqrt(x)))}
+/* Allen, Wald y Worden (2012), versión con distancia hipocentral. Coeficientes verificados con OpenQuake (AllenEtAl2012Rhypo). */
+function mmiAWW(M,r){
+  const rm=-0.209+2.042*Math.exp(M-5);
+  let f=2.085+1.428*M-1.402*Math.log(Math.sqrt(r*r+rm*rm));
+  if(r>50)f+=0.078*Math.log(r/50);
+  return {mmi:f,sigma:0.82+0.37/(1+Math.pow(r/22.9,2))};
+}
+function erf(x){const t=1/(1+0.3275911*Math.abs(x)),y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return x>=0?y:-y}
+function normCdf(z){return 0.5*(1+erf(z/Math.SQRT2))}
+function validEv(e){return !!e&&isFinite(e.t)&&isFinite(e.lat)&&isFinite(e.lon)&&isFinite(e.mag)&&Math.abs(e.lat)<=90&&Math.abs(e.lon)<=180}
+function feltAt(ev,pl){
+  const epi=distKm(ev.lat,ev.lon,pl.lat,pl.lon),dep=Math.max(0,isFinite(+ev.depth)?+ev.depth:10),rhyp=Math.max(1,Math.sqrt(epi*epi+dep*dep));
+  const r=mmiAWW(+ev.mag,rhyp),mmi=r.mmi+CFG.CHILE_OFFSET;
+  const p=1-normCdf((CFG.FELT_MMI-mmi)/r.sigma);
+  return {epi,rhyp,mmi,sigma:r.sigma,p:Math.max(0,Math.min(1,p))};
+}
+function evaluate(events,pl){return (events||[]).filter(validEv).map(e=>Object.assign({},e,feltAt(e,pl)))}
+function recentOf(evs,now){const a=now-CFG.WINDOW_MIN*60000,b=now+CFG.FUTURE_MIN*60000;return evs.filter(e=>e.t>=a&&e.t<=b)}
+function listOf(evs,now){const a=now-CFG.LIST_DAYS*864e5,b=now+CFG.FUTURE_MIN*60000;return evs.filter(e=>e.t>=a&&e.t<=b&&e.p>=CFG.LIST_MIN_P).sort((x,y)=>y.t-x.t).slice(0,CFG.LIST_N)}
+/* La decisión. sensor: 'quiet' | 'leve' | 'shaking' | 'none'. quality: 'full' (CSN) | 'partial' (respaldo) | 'none'. */
+function decide(o){
+  const rec=recentOf(o.evs,o.now).sort((a,b)=>b.p-a.p||b.t-a.t),top=rec[0]||null,p=top?top.p:0,s=o.sensor||'none';
+  let k,why;
+  if(p>=CFG.P_SI){k='si';why='registro'}
+  else if(p>=CFG.P_QUIZAS){k='quizas';why='registro'}
+  else if(s==='shaking'){k='quizas';why='sensor'}            /* el sensor solo nunca da "Sí" */
+  else if(p>=CFG.P_BAJA){k='probno';why='lejano'}
+  else if(o.quality==='none'){k='sindatos';why='sindatos'}   /* sin datos nunca se responde "No" */
+  else if(s==='quiet'){k='no';why='sensor'}
+  else if(s==='leve'){k='probno';why='leve'}
+  else if(o.settled&&o.quality==='full'){k='no';why='tiempo'}
+  else {k='probno';why='espera'}
+  return {k,why,top,p};
+}
+function pctTxt(p){if(p<0.05)return 'menos de 5%';return '~'+Math.min(95,Math.round(p*20)*5)+'%'}
+function magTxt(m){return (Math.round(m*10)/10).toFixed(1).replace('.',',')}
+function kmTxt(k){return k<10?(Math.round(k*10)/10+'').replace('.',',')+' km':Math.round(k)+' km'}
+const _parts=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23',weekday:'short'});
+function scl(t){const o={};for(const x of _parts.formatToParts(new Date(t)))o[x.type]=x.value;return {ymd:o.year+'-'+o.month+'-'+o.day,hm:o.hour+':'+o.minute,wd:o.weekday}}
+const WD={Mon:'Lunes',Tue:'Martes',Wed:'Miércoles',Thu:'Jueves',Fri:'Viernes',Sat:'Sábado',Sun:'Domingo'};
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function dayDiff(a,b){const x=a.split('-').map(Number),y=b.split('-').map(Number);return Math.round((Date.UTC(y[0],y[1]-1,y[2])-Date.UTC(x[0],x[1]-1,x[2]))/864e5)}
+function agoTxt(t,now){const m=Math.max(0,Math.round((now-t)/60000));if(m<1)return 'hace un momento';if(m<60)return 'hace '+m+' min';const h=Math.floor(m/60);if(h<24)return 'hace '+h+' h';const d=Math.floor(h/24);return d===1?'hace 1 día':'hace '+d+' días'}
+function whenTxt(t,now){
+  const a=scl(t),b=scl(now),dd=dayDiff(a.ymd,b.ymd),m=Math.round((now-t)/60000);
+  if(m>=0&&m<60)return (m<1?'Hace un momento':'Hace '+m+' min')+' ('+a.hm+')';
+  if(dd===0)return 'Hoy '+a.hm;
+  if(dd===1)return 'Ayer '+a.hm;
+  if(dd>1&&dd<7)return WD[a.wd]+' '+a.hm;
+  const p=a.ymd.split('-');return (+p[2])+' '+MES[+p[1]-1]+' '+a.hm;
+}
+function clockTxt(t){return scl(t).hm}
+/* Textos de la respuesta: calmados, cortos y siempre con la base. */
+function answerCopy(d,c){
+  const pl=c.placeName,e=d.top,partial=c.quality==='partial'?' (Revisé registros internacionales de respaldo.)':'';
+  const evLine=e?'Magnitud '+magTxt(e.mag)+', a '+kmTxt(e.epi)+' de '+pl+(e.place?' ('+e.place+')':'')+', '+agoTxt(e.t,c.now)+'.':'';
+  const pLine=e?' Probabilidad de sentirse ahí: '+pctTxt(e.p)+'.':'';
+  switch(d.k){
+    case 'si':return {title:'Sí.',lead:c.sensor==='quiet'||c.sensor==='leve'?'Tembló, pero ya pasó.':c.sensor==='shaking'?'Tembló, y tu celular aún detecta movimiento.':'Tembló '+agoTxt(e.t,c.now)+'.',basis:evLine+pLine};
+    case 'quizas':
+      if(d.why==='sensor')return {title:'Quizás.',lead:'Tu celular detecta movimiento.',basis:'Todavía no hay un registro oficial. Los registros tardan unos minutos: sigo revisando.'+partial};
+      return {title:'Quizás.',lead:'Puede que se haya sentido suave.',basis:'Hubo un sismo. '+evLine+pLine};
+    case 'probno':
+      if(d.why==='lejano')return {title:'Probablemente no.',lead:'Hubo un sismo, pero lejos.',basis:evLine+pLine};
+      if(d.why==='leve')return {title:'Probablemente no.',lead:'No hay sismos registrados cerca.',basis:'Tu celular nota una vibración muy leve, típica de pasos, un vehículo o parlantes.'+partial};
+      return {title:'Probablemente no.',lead:'No hay sismos registrados cerca.',basis:'Los registros oficiales tardan unos minutos en aparecer: sigo revisando.'+partial};
+    case 'no':
+      if(d.why==='tiempo')return {title:'No.',lead:'Todo está bien.',basis:'Revisé los registros durante '+CFG.RECHECK_MIN+' min y no apareció ningún sismo cerca de '+pl+'.'};
+      return {title:'No.',lead:'Todo está bien.',basis:'No hay sismos registrados cerca de '+pl+' en los últimos '+CFG.WINDOW_MIN+' min.'+partial};
+    default:return {title:'Sin datos.',lead:'No pude revisar los registros.',basis:'Revisa tu conexión y vuelve a tocar el botón.'};
+  }
+}
+/* ---- sensor: vibración de 1 a 10 Hz con el celular apoyado (heurístico) ---- */
+function hpFilter(ss,fc){                       /* pasa-altos de 1er orden: saca gravedad y deriva lenta */
+  const RC=1/(2*Math.PI*(fc||0.8)),out=[];let px=null,py=0,pz=0,yx=0,yy=0,yz=0,pt=0;
+  for(const s of ss){
+    if(px===null){px=s.x;py=s.y;pz=s.z;pt=s.t;out.push({t:s.t,x:0,y:0,z:0});continue}
+    const dt=Math.max(0.001,Math.min(0.2,(s.t-pt)/1000)),al=RC/(RC+dt);
+    yx=al*(yx+s.x-px);yy=al*(yy+s.y-py);yz=al*(yz+s.z-pz);px=s.x;py=s.y;pz=s.z;pt=s.t;
+    out.push({t:s.t,x:yx,y:yy,z:yz});
+  }
+  return out;
+}
+function motionStats(hp){
+  /* chunks: mediana de la vibración en trozos de 250 ms. Un sismo mueve parejo; pasos o golpes son picos aislados. */
+  let s2=0,peak=0;const chunks=new Map();
+  for(const p of hp){const m2=p.x*p.x+p.y*p.y+p.z*p.z;s2+=m2;const m=Math.sqrt(m2);if(m>peak)peak=m;const k=Math.floor((p.t-hp[0].t)/250);if(!chunks.has(k))chunks.set(k,[]);chunks.get(k).push(m)}
+  const rms=hp.length?Math.sqrt(s2/hp.length):0;
+  return {n:hp.length,rms,peak,chunks:[...chunks.values()].map(c=>{c.sort((a,b)=>a-b);return c[Math.floor(c.length/2)]})};
+}
+function classifyMotion(st,floor){
+  const f=Math.max(0.004,Math.min(0.03,floor||0.012));
+  if(st.n<20)return 'insuficiente';
+  const act=st.chunks.length?st.chunks.filter(r=>r>=Math.max(0.025,2.2*f)).length/st.chunks.length:0;
+  if(st.rms>=Math.max(0.035,3*f)&&act>=0.4)return 'shaking';
+  if(st.rms>=Math.max(0.022,2*f)||st.peak>=Math.max(0.12,8*f))return 'leve';
+  return 'quiet';
+}
+function isStill(ss,tEnd,win){                  /* quieto = casi sin rotación (la mano siempre rota un poco) */
+  const r=ss.filter(s=>s.t>=tEnd-win&&s.r!=null).map(s=>s.r).sort((a,b)=>a-b);
+  if(!r.length)return true;
+  return r[Math.floor(r.length/2)]<1.5&&r[r.length-1]<8;
+}
+/* ---- fuentes de respaldo (sin el Worker) ---- */
+function normEMSC(j){
+  const out=[];
+  for(const f of (j&&j.features)||[]){const p=f.properties||{},t=Date.parse(p.time);
+    const e={id:'emsc-'+(p.unid||f.id||t),src:'emsc',t,lat:+p.lat,lon:+p.lon,depth:Math.abs(+p.depth)||10,mag:+p.mag,magType:p.magtype||'',place:titleCase(p.flynn_region||''),felt:false,url:p.unid?'https://www.seismicportal.eu/eventdetails.html?unid='+p.unid:''};
+    if(validEv(e))out.push(e)}
+  return out;
+}
+function normUSGS(j){
+  const out=[];
+  for(const f of (j&&j.features)||[]){const p=f.properties||{},g=(f.geometry&&f.geometry.coordinates)||[];
+    const e={id:'usgs-'+f.id,src:'usgs',t:+p.time,lat:+g[1],lon:+g[0],depth:Math.abs(+g[2])||10,mag:+p.mag,magType:p.magType||'',place:placeEnToEs(p.place||''),felt:false,url:p.url||''};
+    if(validEv(e))out.push(e)}
+  return out;
+}
+function titleCase(s){return String(s).toLowerCase().replace(/(^|[\s,(-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase())}
+function placeEnToEs(s){
+  const D={N:'N',S:'S',E:'E',W:'O',NE:'NE',NW:'NO',SE:'SE',SW:'SO',NNE:'NNE',NNW:'NNO',SSE:'SSE',SSW:'SSO',ENE:'ENE',ESE:'ESE',WNW:'ONO',WSW:'OSO'};
+  return String(s).replace(/^(\d+(?:\.\d+)?) km ([NSEW]{1,3}) of /,(m,k,d)=>Math.round(+k)+' km al '+(D[d]||d)+' de ').replace(/, Chile$/,'').replace(/^offshore /i,'Frente a ');
+}
+function mergeEvents(lists){
+  const pri={csn:0,emsc:1,usgs:2},out=[];
+  const all=[].concat(...lists).filter(validEv).sort((a,b)=>(a.src in pri?pri[a.src]:9)-(b.src in pri?pri[b.src]:9));
+  for(const e of all){
+    if(out.some(o=>o.id===e.id||(o.src!==e.src&&Math.abs(o.t-e.t)<90e3&&distKm(o.lat,o.lon,e.lat,e.lon)<120)))continue;
+    out.push(e);
+  }
+  return out.sort((a,b)=>b.t-a.t);
+}
+/*CORE-END*/
+
+/* ---------------- utilidades ---------------- */
+const $=(s,r)=>(r||document).querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const reduceMotion=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+function newId(){return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function lsGet(k){try{const v=localStorage.getItem(APP_ID+':'+k);return v==null?null:JSON.parse(v)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(APP_ID+':'+k,JSON.stringify(v))}catch(e){}}
+function todayStr(){return scl(Date.now()).ymd}
+const ICONS={
+  gear:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  close:'<path d="M6 6l12 12M18 6 6 18"/>',
+  locate:'<path d="M3 11 22 2l-9 19-2-8-8-2z"/>',
+  search:'<circle cx="11" cy="11" r="7.5"/><path d="m20.5 20.5-4.2-4.2"/>',
+  up:'<path d="m6 15 6-6 6 6"/>',
+  down:'<path d="m6 9 6 6 6-6"/>'
+};
+function icon(n,cls){return '<svg class="ic'+(cls?' '+cls:'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICONS[n]||'')+'</svg>'}
+
+/* ---------------- respuesta física (de la skill) ---------------- */
+/* iOS no expone vibración a la web: el truco del <input switch> vibra en iOS 18+. Llamar DENTRO de un toque. */
+function haptic(){
+  try{if(navigator.vibrate){navigator.vibrate(12);return}}catch(e){}
+  try{const l=document.createElement('label');l.setAttribute('aria-hidden','true');l.style.display='none';const i=document.createElement('input');i.type='checkbox';i.setAttribute('switch','');l.appendChild(i);document.head.appendChild(l);l.click();l.remove()}catch(e){}
+}
+let toastTimer=null;
+function toast(msg,action){
+  const el=$('#toast');
+  el.innerHTML='<span>'+esc(msg)+'</span>'+(action?'<button type="button" class="toast-act">'+esc(action.label)+'</button>':'');
+  if(action)el.querySelector('.toast-act').onclick=()=>{el.classList.remove('on');action.fn()};
+  el.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('on'),action?5000:2800);
+}
+
+/* ---------------- datos del usuario: lugares, solo en este teléfono (de la skill) ---------------- */
+const Store=(()=>{
+  const KEY=APP_ID+':data:v1',data={},listeners=[];
+  COLS.forEach(c=>data[c]=new Map());
+  let db=null,mode='connecting',loaded=false;
+  const emit=()=>listeners.forEach(f=>{try{f()}catch(e){console.error(e)}});
+  function loadLocal(){try{const o=JSON.parse(localStorage.getItem(KEY)||'{}');COLS.forEach(c=>{data[c]=new Map(Object.entries(o[c]||{}))})}catch(e){}}
+  function saveLocal(){try{const o={};COLS.forEach(c=>{o[c]=Object.fromEntries(data[c])});localStorage.setItem(KEY,JSON.stringify(o))}catch(e){toast('No se pudo guardar en este teléfono.')}}
+  async function start(){
+    if(WEB){mode='web';loadLocal();loaded=true;emit();return}
+    try{if(window.claude&&typeof window.claude.use==='function')db=await window.claude.use('db')}catch(e){db=null}
+    mode=db?'db':'sin-db';loaded=true;emit();
+  }
+  function put(c,id,v){data[c].set(id,v);if(mode==='web')saveLocal();emit()}
+  function del(c,id){data[c].delete(id);if(mode==='web')saveLocal();emit()}
+  function exportJSON(){const o={app:APP_ID,v:1,exportedAt:new Date().toISOString(),data:{}};COLS.forEach(c=>{o.data[c]=Object.fromEntries(data[c])});return JSON.stringify(o)}
+  function importJSON(txt){
+    let o;try{o=JSON.parse(String(txt||'').trim())}catch(e){return -1}
+    if(!o||!o.data||typeof o.data!=='object')return -1;
+    let n=0;COLS.forEach(c=>{const src=o.data[c];if(src&&typeof src==='object')for(const id in src){const v=src[id];if(/^[A-Za-z0-9_.~:@+-]{1,200}$/.test(id)&&v&&typeof v==='object'&&isFinite(v.lat)&&isFinite(v.lon)){put(c,id,v);n++}}});
+    return n;
+  }
+  return {start,put,del,exportJSON,importJSON,onChange:f=>listeners.push(f),get:(c,id)=>data[c].get(id),
+    all:c=>[...data[c].entries()].map(([id,v])=>Object.assign({},v,{id})),mode:()=>mode,loaded:()=>loaded};
+})();
+
+/* ---------------- tema (de la skill) ---------------- */
+const THEME_BG={light:'#F2F2F7',dark:'#000000'};
+function applyTheme(){const v=lsGet('theme')||'auto';if(v==='light'||v==='dark')document.documentElement.setAttribute('data-app-theme',v);else document.documentElement.removeAttribute('data-app-theme');syncThemeColor()}
+function syncThemeColor(){
+  if(!WEB)return;const v=lsGet('theme')||'auto';
+  const ml=document.querySelector('meta[name="theme-color"][media*="light"]'),md=document.querySelector('meta[name="theme-color"][media*="dark"]');
+  if(ml&&md){if(v==='light'){ml.content=THEME_BG.light;md.content=THEME_BG.light}else if(v==='dark'){ml.content=THEME_BG.dark;md.content=THEME_BG.dark}else{ml.content=THEME_BG.light;md.content=THEME_BG.dark}}
+}
+const lastHTML=new WeakMap();
+function setHTML(el,h){if(lastHTML.get(el)===h)return false;el.innerHTML=h;lastHTML.set(el,h);return true}
+function setText(el,t){if(el.textContent!==t)el.textContent=t}
+function showModal(id){const m=$('#'+id);m.removeAttribute('inert');m.classList.add('on');$('#scrim').classList.add('on');document.body.classList.add('lock')}
+function closeModal(id){const m=$('#'+id);m.classList.remove('on');m.setAttribute('inert','');if(document.activeElement&&m.contains(document.activeElement))document.activeElement.blur();if(!document.querySelector('.modal.on')){$('#scrim').classList.remove('on');document.body.classList.remove('lock')}}
+
+/* ---------------- lugares ---------------- */
+function places(){return Store.all('places').sort((a,b)=>(a.order||0)-(b.order||0)||String(a.created).localeCompare(String(b.created)))}
+function curPlace(){const ps=places();return ps.find(p=>p.id===S.placeId)||ps[0]||null}
+function round3(x){return Math.round(x*1000)/1000}
+
+/* ---------------- datos sísmicos ---------------- */
+function apiReady(){return /^https:\/\//.test(API_URL)&&!/TU-SUBDOMINIO/.test(API_URL)}
+async function fetchJSON(url,ms){
+  const c=typeof AbortController==='function'?new AbortController():null,tm=setTimeout(()=>{if(c)c.abort()},ms);
+  try{const r=await fetch(url,{signal:c?c.signal:undefined,cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}
+  finally{clearTimeout(tm)}
+}
+const Data=(()=>{
+  let week=lsGet('week');
+  const base=u=>API_URL.replace(/\/+$/,'')+u;
+  async function viaRespaldo(now){
+    const start=new Date(now-8*864e5).toISOString().slice(0,19);
+    const box='minlat=-57&maxlat=-16&minlon=-81&maxlon=-64';
+    const [em,us]=await Promise.all([
+      fetchJSON('https://www.seismicportal.eu/fdsnws/event/1/query?format=json&'+box+'&minmag=2.5&orderby=time&limit=400&start='+start,9000).then(normEMSC,()=>null),
+      fetchJSON('https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minlatitude=-57&maxlatitude=-16&minlongitude=-81&maxlongitude=-64&minmagnitude=2.5&orderby=time&limit=400&starttime='+start,9000).then(normUSGS,()=>null)
+    ]);
+    if(!em&&!us)return null;
+    return mergeEvents([em||[],us||[]]);
+  }
+  async function load(onWeek){
+    const now=Date.now();let rec=null,quality='none',src='none';
+    if(apiReady()){
+      try{const j=await fetchJSON(base('/sismos'),8000);if(j&&Array.isArray(j.events)&&j.quality!=='none'){rec=j.events;quality=j.quality==='full'?'full':'partial';src=quality==='full'?'csn':'emsc'}}catch(e){}
+      if(!week||now-week.at>CFG.WEEK_TTL_MIN*60000){
+        fetchJSON(base('/semana'),10000).then(j=>{if(j&&Array.isArray(j.events)&&j.quality!=='none'){week={at:Date.now(),events:j.events};lsSet('week',week);if(onWeek)onWeek()}}).catch(()=>{});
+      }
+    }
+    if(!rec){const fb=await viaRespaldo(now);if(fb){rec=fb;quality='partial';src='intl'}}
+    const extra=(apiReady()&&week&&now-week.at<2*864e5)?week.events:[];
+    return {events:rec?mergeEvents([rec,extra]):mergeEvents([extra]),quality,src,at:now};
+  }
+  function withWeek(d){if(!d||!week)return d;return Object.assign({},d,{events:mergeEvents([d.events,week.events])})}
+  return {load,withWeek};
+})();
+
+/* ---------------- sensor de movimiento ---------------- */
+const Sensor=(()=>{
+  let st='idle',buf=[],t0=0,stillFrom=0,measFrom=0,cb=null,timer=0,res=null,lastT=0;
+  const trace=[];let tr={px:null,py:0,pz:0,yx:0,yy:0,yz:0,pt:0};
+  function request(){                         /* se llama DENTRO del toque: iOS lo exige */
+    if(typeof window.DeviceMotionEvent==='undefined')return Promise.resolve('unavailable');
+    if(typeof DeviceMotionEvent.requestPermission==='function'){
+      try{return DeviceMotionEvent.requestPermission().then(r=>r==='granted'?'granted':'denied',()=>'denied')}catch(e){return Promise.resolve('denied')}
+    }
+    return Promise.resolve('granted');
+  }
+  function emit(){if(cb)cb(st,res)}
+  function start(f){
+    stop(true);cb=f;st='waiting';buf=[];trace.length=0;res=null;t0=performance.now();stillFrom=0;measFrom=0;tr={px:null,py:0,pz:0,yx:0,yy:0,yz:0,pt:0};
+    window.addEventListener('devicemotion',onMotion);timer=setInterval(tick,100);emit();
+  }
+  function stop(silent,final){window.removeEventListener('devicemotion',onMotion);clearInterval(timer);timer=0;if(final){st=final;if(!silent)emit()}}
+  function onMotion(e){
+    const a=e.acceleration,g=e.accelerationIncludingGravity,r=e.rotationRate,now=performance.now();
+    let x,y,z;
+    if(a&&a.x!=null){x=a.x;y=a.y;z=a.z}else if(g&&g.x!=null){x=g.x;y=g.y;z=g.z}else return;
+    const rot=r&&r.alpha!=null?Math.sqrt(r.alpha*r.alpha+r.beta*r.beta+r.gamma*r.gamma):null;
+    buf.push({t:now,x,y,z,r:rot});
+    if(buf.length>2400)buf.splice(0,600);
+    /* trazo del sismógrafo (solo para dibujar) */
+    if(tr.px===null){tr.px=x;tr.py=y;tr.pz=z;tr.pt=now}
+    else{const dt=Math.max(0.001,Math.min(0.2,(now-tr.pt)/1000)),RC=0.199,al=RC/(RC+dt);
+      tr.yx=al*(tr.yx+x-tr.px);tr.yy=al*(tr.yy+y-tr.py);tr.yz=al*(tr.yz+z-tr.pz);tr.px=x;tr.py=y;tr.pz=z;tr.pt=now}
+    trace.push(tr.yx+tr.yy+tr.yz);if(trace.length>360)trace.shift();
+    lastT=now;
+  }
+  function tick(){
+    const now=performance.now(),el=now-t0;
+    if(!buf.length){if(el>1600){stop(false,'unavailable')}return}
+    if(el<400)return;                          /* el propio toque mueve el celular */
+    if(el>25000&&st!=='measuring'){stop(false,'handheld-final');return}
+    const still=isStill(buf,now,500);
+    if(st==='waiting'||st==='handheld'){
+      if(still){if(!stillFrom)stillFrom=now;if(now-stillFrom>=500){st='measuring';measFrom=now;trace.length=0;emit()}}
+      else{stillFrom=0;if(st==='waiting'&&el>1200){st='handheld';emit()}}
+    }else if(st==='measuring'){
+      if(!still){st='handheld';stillFrom=0;emit();return}
+      if(now-measFrom>=3500){
+        const hp=hpFilter(buf.filter(s=>s.t>=measFrom-1000)).filter(s=>s.t>=measFrom);
+        const stats=motionStats(hp);res=Object.assign({kind:classifyMotion(stats,lsGet('sensor-floor'))},stats);
+        stop(false,res.kind==='insuficiente'?'unavailable':res.kind);
+      }
+    }
+  }
+  return {request,start,stop:()=>stop(true,'idle'),state:()=>st,trace,active:()=>!!timer};
+})();
+
+/* ---------------- estado y pantalla ---------------- */
+const S={placeId:lsGet('place'),asked:false,data:null,fetching:false,sensor:'idle',sensorPlace:null,pressAt:0,watchUntil:0,lastFetch:0,settled:false,lastK:'',importing:false};
+const $app=$('#app'),$big=$('#big'),$wrap=$('#btnWrap');
+const PENDING=['asking','waiting','measuring'];
+function sensorFor(pl){return pl&&S.sensorPlace===pl.id?S.sensor:'na'}
+function sensorForDecision(s){return s==='quiet'||s==='leve'||s==='shaking'?s:'none'}
+
+function renderChips(){
+  const ps=places(),cur=curPlace();
+  $('#chips').hidden=!ps.length;
+  setHTML($('#chipsIn'),ps.map(p=>'<button type="button" class="chip" data-act="chip" data-id="'+esc(p.id)+'" aria-pressed="'+(cur&&p.id===cur.id)+'">'+esc(p.name)+'</button>').join('')
+    +'<button type="button" class="chip add" data-act="place-new" aria-label="Agregar lugar">'+icon('plus')+'</button>');
+}
+function renderShell(){
+  const has=places().length>0;
+  $('#onboard').hidden=has;$app.classList.toggle('onb',!has);
+  $big.classList.toggle('off',!has);
+  $big.setAttribute('aria-label',has?'¿Está temblando? Revisar ahora':'Primero guarda un lugar');
+  $('#hint').hidden=!has||!!lsGet('hint-done')||S.asked;
+  const ic=installCardHTML();setHTML($('#installSlot'),ic);$app.classList.toggle('has-install',!!ic&&!S.asked);
+  renderChips();
+}
+function renderAnswer(){
+  const pl=curPlace(),$a=$('#answer');
+  $app.classList.toggle('asked',S.asked&&!!pl);
+  if(!S.asked||!pl){$a.hidden=true;$('#recent').hidden=true;return}
+  $a.hidden=false;
+  const sen=sensorFor(pl),now=Date.now(),$t=$('#aTitle');
+  if(!S.data||PENDING.includes(sen)){
+    $a.dataset.k='pending';$t.hidden=true;S.lastK='';
+    setText($('#aLead'),'Revisando…');setText($('#aBasis'),'');setText($('#aWatch'),'');
+  }else{
+    const evs=evaluate(S.data.events,pl);
+    const d=decide({evs,now,sensor:sensorForDecision(sen),quality:S.data.quality,settled:S.settled});
+    const c=answerCopy(d,{now,placeName:pl.name,sensor:sensorForDecision(sen),quality:S.data.quality});
+    $a.dataset.k=d.k;$t.hidden=false;
+    if(S.lastK!==d.k){setText($t,c.title);$t.classList.toggle('long',c.title.length>8);$t.classList.remove('pop');void $t.offsetWidth;$t.classList.add('pop');S.lastK=d.k}
+    setText($('#aLead'),c.lead);setText($('#aBasis'),c.basis);
+    const left=Math.ceil((S.watchUntil-now)/60000);
+    setText($('#aWatch'),d.k!=='si'&&!S.settled&&left>0&&S.data.quality!=='none'?'Sigo revisando '+(left===1?'1 minuto más':left+' minutos más')+'.':'');
+  }
+  renderSeis(sen);
+  renderList(pl,now);
+}
+const SEIS_NOTE={waiting:'Preparando el sensor…',handheld:'Para medir aquí mismo, deja el celular apoyado.',measuring:'Midiendo… no muevas el celular.',
+  quiet:'Tu celular no detecta movimiento.',leve:'Vibración muy leve (pasos, parlantes o similar).',shaking:'Tu celular detecta movimiento.',
+  'handheld-final':'No pude medir: el celular no quedó apoyado.',denied:'Sin permiso para usar el sensor. Revisa Ajustes.'};
+function renderSeis(sen){
+  const show=sen in SEIS_NOTE;
+  $('#seis').hidden=!show;
+  if(show)setText($('#seisNote'),SEIS_NOTE[sen]);
+  if(show&&(sen==='waiting'||sen==='handheld'||sen==='measuring'))startDraw();
+  else drawSeis(false);
+}
+function renderList(pl,now){
+  const $r=$('#recent');
+  if(!S.data||S.data.quality==='none'){$r.hidden=true;return}
+  $r.hidden=false;
+  const L=listOf(evaluate(S.data.events,pl),now);
+  setText($('#rTitle'),'Sismos que se pudieron sentir en '+pl.name);
+  setHTML($('#qList'),L.length?L.map(e=>'<li class="q"><a class="q-row" '+(e.url?'href="'+esc(e.url)+'" target="_blank" rel="noopener"':'')+'>'
+      +'<span class="q-mag" aria-label="Magnitud '+magTxt(e.mag)+'">'+magTxt(e.mag)+'</span>'
+      +'<span class="q-body"><span class="q-place">'+esc(e.place||'Sismo')+(e.felt?'<span class="q-felt">percibido</span>':'')+'</span><span class="q-when">'+esc(whenTxt(e.t,now))+', a '+kmTxt(e.epi)+'</span></span>'
+      +'<span class="q-p"><b>'+pctTxt(e.p)+'</b><small>de sentirse</small></span></a></li>').join('')
+    :'<li class="q-empty">Ningún sismo de los últimos '+CFG.LIST_DAYS+' días se habría sentido en '+esc(pl.name)+'.</li>');
+  const at=clockTxt(S.data.at);
+  setText($('#source'),S.data.src==='csn'?'Datos: Centro Sismológico Nacional de la Universidad de Chile. Actualizado a las '+at+'. La probabilidad es una estimación.'
+    :'Datos de respaldo: EMSC (CC BY 4.0) y USGS. Actualizado a las '+at+'. La probabilidad es una estimación.');
+}
+
+/* ---------------- sismógrafo ---------------- */
+let drawing=false;
+function startDraw(){if(drawing)return;drawing=true;const loop=()=>{drawSeis(true);if(drawing&&Sensor.active())requestAnimationFrame(loop);else{drawing=false;drawSeis(false)}};requestAnimationFrame(loop)}
+function drawSeis(live){
+  const cv=$('#seisCv');if(!cv||cv.offsetParent===null)return;
+  const dpr=Math.min(3,window.devicePixelRatio||1),w=cv.clientWidth,h=cv.clientHeight;
+  if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}
+  const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);
+  const cs=getComputedStyle(document.documentElement),ink=cs.getPropertyValue('--ink-2').trim(),line=cs.getPropertyValue('--line').trim(),red=cs.getPropertyValue('--red').trim();
+  x.strokeStyle=line;x.lineWidth=1;x.beginPath();x.moveTo(0,h/2);x.lineTo(w,h/2);x.stroke();
+  const st=Sensor.state();if(st==='waiting'||st==='handheld')return;   /* en la mano no se dibuja: se vería alarmante y no es un sismo */
+  const t=Sensor.trace,n=Math.min(t.length,300);if(!n)return;
+  const scale=(h/2-3)/0.3;                     /* 0,3 m/s² = borde: el ruido del celular se ve casi plano */
+  x.strokeStyle=ink;x.lineWidth=1.6;x.lineJoin='round';x.beginPath();
+  for(let i=0;i<n;i++){const v=t[t.length-n+i],px=w-(n-1-i)*(w/299),py=h/2-Math.max(-h/2+2,Math.min(h/2-2,v*scale));i?x.lineTo(px,py):x.moveTo(px,py)}
+  x.stroke();
+  if(live){const v=t[t.length-1],py=h/2-Math.max(-h/2+2,Math.min(h/2-2,v*scale));x.fillStyle=red;x.beginPath();x.arc(w-2,py,2.6,0,Math.PI*2);x.fill()}
+}
+
+/* ---------------- el botón ---------------- */
+function onBig(){
+  if(!places().length){openPlace('new',{name:'Casa',focus:'search'});return}
+  haptic();
+  const permP=lsGet('sensor')===false?Promise.resolve('off'):Sensor.request();   /* dentro del toque */
+  const pl=curPlace();
+  S.asked=true;S.settled=false;S.sensor='asking';S.sensorPlace=pl.id;S.pressAt=Date.now();S.watchUntil=S.pressAt+CFG.RECHECK_MIN*60000;S.lastK='';
+  if(!lsGet('hint-done'))lsSet('hint-done',true);
+  $wrap.classList.add('checking');
+  renderShell();renderAnswer();
+  permP.then(p=>{
+    if(p==='granted')Sensor.start(onSensor);
+    else{S.sensor=p==='off'?'off':p==='denied'?'denied':'unavailable';renderAnswer()}
+  });
+  refresh(true);
+}
+function onSensor(st,res){
+  S.sensor=st;
+  if(st==='quiet'&&res&&isFinite(res.rms)){const f=lsGet('sensor-floor')||0.012;lsSet('sensor-floor',Math.max(0.004,Math.min(0.03,0.7*f+0.3*res.rms)))}
+  renderAnswer();
+}
+async function refresh(first){
+  if(S.fetching)return;S.fetching=true;S.lastFetch=Date.now();
+  try{S.data=await Data.load(()=>{S.data=Data.withWeek(S.data);renderAnswer()})}
+  catch(e){S.data={events:[],quality:'none',src:'none',at:Date.now()}}
+  finally{S.fetching=false;if(first)$wrap.classList.remove('checking');renderAnswer()}
+}
+setInterval(()=>{
+  if(!S.asked)return;
+  const now=Date.now();
+  if(now<S.watchUntil){if(!S.fetching&&now-S.lastFetch>=CFG.RECHECK_S*1000)refresh(false)}
+  else if(!S.settled)S.settled=true;
+  renderAnswer();
+},5000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){renderShell();if(S.asked){if(Date.now()<S.watchUntil&&Date.now()-S.lastFetch>20000)refresh(false);renderAnswer()}}});
+
+/* ---------------- agregar / editar lugar ---------------- */
+const PM={mode:'new',id:null,loc:null,results:[],busy:'',msg:'',delArmed:false};
+function nominatim(path,params){return 'https://nominatim.openstreetmap.org/'+path+'?'+new URLSearchParams(Object.assign({format:'jsonv2','accept-language':'es',addressdetails:'1'},params)).toString()}
+function shortAddr(r){
+  const a=r.address||{},parts=[a.road?(a.road+(a.house_number?' '+a.house_number:'')):null,a.suburb||a.neighbourhood||a.city_district,a.city||a.town||a.village||a.municipality||a.county,a.state].filter(Boolean);
+  const u=[...new Set(parts)].slice(0,3).join(', ');return u||String(r.display_name||'').split(',').slice(0,3).join(',');
+}
+function openPlace(mode,o){
+  o=o||{};const p=o.id?Store.get('places',o.id):null;
+  PM.mode=mode;PM.id=o.id||null;PM.loc=p?{lat:p.lat,lon:p.lon,label:p.label}:null;PM.results=[];PM.busy='';PM.msg='';PM.delArmed=false;
+  setText($('#pmTitle'),mode==='edit'?'Editar lugar':'Nuevo lugar');
+  const names=places().map(x=>x.name.toLowerCase());
+  const sugs=['Casa','Universidad','Trabajo','Abuela'].filter(s=>!names.includes(s.toLowerCase()));
+  $('#pmBody').innerHTML='<label class="lbl" for="pmName">Nombre</label><input id="pmName" class="field" type="text" maxlength="24" autocomplete="off" enterkeyhint="done" placeholder="Ej.: Universidad" value="'+esc(p?p.name:(o.name||''))+'">'
+    +(mode==='new'&&sugs.length?'<div class="sugs">'+sugs.map(s=>'<button type="button" class="sug" data-act="pm-sug" data-v="'+esc(s)+'">'+esc(s)+'</button>').join('')+'</div>':'')
+    +'<p class="lbl">Ubicación</p><div id="pmLoc"></div>'
+    +'<button type="button" class="btn wide" data-act="pm-gps">'+icon('locate')+'Usar mi ubicación actual</button>'
+    +'<p class="or">o busca una dirección o comuna</p>'
+    +'<form class="search" id="pmSearch" autocomplete="off"><input id="pmQ" class="field" type="search" enterkeyhint="search" placeholder="Ej.: Av. Fontova, Huechuraba" aria-label="Dirección o comuna"><button type="submit" class="btn">Buscar</button></form>'
+    +'<div id="pmRes"></div>'
+    +'<p class="fine">Búsqueda con datos de © colaboradores de OpenStreetMap. La ubicación queda guardada solo en este teléfono, con precisión de unos 100 m.</p>'
+    +(mode==='edit'?'<div class="row-btns"><button type="button" class="btn danger" data-act="pm-delete">Borrar lugar</button></div>':'');
+  renderPM();showModal('placeModal');
+  if(o.focus==='search'){try{$('#pmQ').focus({preventScroll:true})}catch(e){}}   /* en el mismo toque: iOS abre el teclado */
+}
+function renderPM(){
+  let h='';
+  if(PM.loc)h+='<div class="loc-ok">'+icon('check')+'<span>'+esc(PM.loc.label||'Ubicación guardada')+'</span></div>';
+  if(PM.busy==='gps')h+='<p class="muted">Buscando tu ubicación…</p>';
+  if(PM.msg)h+='<p class="warn" role="status">'+esc(PM.msg)+'</p>';
+  setHTML($('#pmLoc'),h);
+  setHTML($('#pmRes'),PM.busy==='search'?'<p class="muted">Buscando…</p>':PM.results.length?'<ul class="results">'+PM.results.map((r,i)=>'<li><button type="button" data-act="pm-pick" data-i="'+i+'">'+esc(r.label)+'</button></li>').join('')+'</ul>':'');
+  const n=$('#pmName');$('#pmSave').disabled=!(PM.loc&&n&&n.value.trim());
+}
+function getGPS(){
+  return new Promise((ok,ko)=>{
+    if(!navigator.geolocation){ko({code:0});return}
+    navigator.geolocation.getCurrentPosition(p=>ok({lat:round3(p.coords.latitude),lon:round3(p.coords.longitude)}),ko,{enableHighAccuracy:false,timeout:15000,maximumAge:300000});
+  });
+}
+function gpsError(e){return e&&e.code===1?'No hay permiso de ubicación. Puedes buscar la dirección.':'No pude obtener tu ubicación. Prueba buscando la dirección.'}
+async function reverseLabel(lat,lon){
+  try{const r=await fetchJSON(nominatim('reverse',{lat,lon,zoom:'14'}),7000);const a=r.address||{};
+    const u=[...new Set([a.suburb||a.city_district||a.neighbourhood,a.city||a.town||a.village||a.municipality||a.county].filter(Boolean))].join(', ');return u||'Ubicación actual'}
+  catch(e){return 'Ubicación actual'}
+}
+function savePlace(v,id){
+  const isNew=!id;id=id||newId();
+  const prev=Store.get('places',id);
+  Store.put('places',id,Object.assign({order:places().length,created:new Date().toISOString()},prev||{},v));
+  if(isNew&&(!S.placeId||!Store.get('places',S.placeId))){S.placeId=id;lsSet('place',id)}
+  return id;
+}
+async function searchPlaces(q){
+  PM.busy='search';PM.msg='';PM.results=[];renderPM();
+  try{const r=await fetchJSON(nominatim('search',{q,countrycodes:'cl',limit:'5'}),9000);
+    PM.results=(r||[]).map(x=>({lat:round3(+x.lat),lon:round3(+x.lon),label:shortAddr(x)})).filter(x=>isFinite(x.lat)&&isFinite(x.lon));
+    if(!PM.results.length)PM.msg='No encontré esa dirección. Prueba con la calle y la comuna.';
+  }catch(e){PM.msg='No pude buscar. Revisa tu conexión.'}
+  PM.busy='';renderPM();
+}
+
+/* ---------------- ajustes ---------------- */
+const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const STANDALONE=navigator.standalone===true||!!(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+let installEvt=null;
+function installCardHTML(){
+  if(!WEB||STANDALONE||lsGet('install-hint'))return '';
+  const close='<button type="button" class="x" data-act="install-x" aria-label="Cerrar">'+icon('close')+'</button>';
+  if(installEvt)return '<aside class="install"><img src="icon-192.png" alt=""><div><h3>Instala la app</h3><p>Queda en tu pantalla de inicio y abre al instante.</p><button type="button" class="btn primary" data-act="install">Instalar</button></div>'+close+'</aside>';
+  if(IS_IOS)return '<aside class="install"><img src="icon-192.png" alt=""><div><h3>Instala la app</h3><p>En Safari toca Compartir y elige “Agregar a pantalla de inicio”. Se abre a pantalla completa y tus lugares quedan guardados.</p></div>'+close+'</aside>';
+  return '';
+}
+async function shareBackup(){
+  const txt=Store.exportJSON(),name=APP_ID+'-respaldo-'+todayStr()+'.json';
+  try{if(navigator.canShare&&navigator.share&&typeof File==='function'){const f=new File([txt],name,{type:'application/json'});if(navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Respaldo'});lsSet('last-backup',todayStr());return 'ok'}}}catch(e){if(e&&e.name==='AbortError')return 'cancel'}
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);lsSet('last-backup',todayStr());return 'ok'}catch(e){}
+  return 'fail';
+}
+function statusTxt(){
+  if(!apiReady())return 'Fuente principal sin configurar: por ahora uso los registros internacionales de respaldo, que son menos detallados.';
+  if(S.data&&S.data.src==='csn')return 'Conectada al CSN. Última revisión a las '+clockTxt(S.data.at)+'.';
+  if(S.data&&S.data.src!=='csn')return 'El CSN no respondió en la última revisión: usé los registros de respaldo.';
+  return 'Conectada al CSN.';
+}
+function settingsHTML(){
+  const ps=places(),th=lsGet('theme')||'auto',on=lsGet('sensor')!==false,lb=lsGet('last-backup');
+  let h='<section class="block"><h3>Lugares</h3>'+(ps.length?'<ul class="plist">'+ps.map((p,i)=>'<li class="prow" data-id="'+esc(p.id)+'"><button type="button" class="prow-main" data-act="place-edit"><span class="pn">'+esc(p.name)+'</span><span class="pl">'+esc(p.label||'')+'</span></button><span class="pord"><button type="button" class="mini" data-act="place-up" aria-label="Subir '+esc(p.name)+'"'+(i===0?' disabled':'')+'>'+icon('up')+'</button><button type="button" class="mini" data-act="place-down" aria-label="Bajar '+esc(p.name)+'"'+(i===ps.length-1?' disabled':'')+'>'+icon('down')+'</button></span></li>').join('')+'</ul>':'')
+    +(ps.length<6?'<div class="row-btns"><button type="button" class="btn" data-act="place-new">'+icon('plus')+'Agregar lugar</button></div>':'<p class="p sw-note">Máximo 6 lugares.</p>')+'</section>';
+  h+='<section class="block"><h3>Tema</h3><div class="seg">'+[['auto','Automático'],['light','Claro'],['dark','Oscuro']].map(([k,l])=>'<button type="button" data-act="theme" data-theme="'+k+'" aria-pressed="'+(th===k)+'">'+l+'</button>').join('')+'</div></section>';
+  h+='<section class="block"><h3>Sensor de movimiento</h3><div class="sw-row"><span>Medir al tocar el botón</span><button type="button" class="switch" role="switch" aria-checked="'+on+'" aria-label="Medir con el sensor al tocar el botón" data-act="sensor-toggle"><span></span></button></div>'
+    +'<p class="p sw-note">Mide la vibración unos segundos. Funciona con el celular apoyado (mesa, sillón o cama) y mide donde estás tú: la app supone que estás en el lugar elegido. Es una estimación, no un sismógrafo profesional.</p>'
+    +(S.sensor==='denied'?'<p class="p sw-note">El permiso de movimiento está bloqueado. Cierra la app por completo y vuelve a abrirla para que lo pida otra vez.</p>':'')+'</section>';
+  h+='<section class="block"><h3>Fuentes de datos</h3><div class="card"><p class="p">Centro Sismológico Nacional de la Universidad de Chile (<a href="https://www.sismologia.cl" target="_blank" rel="noopener">sismologia.cl</a>). Respaldo: EMSC (licencia CC BY 4.0) y USGS.</p><p class="p">Direcciones: © colaboradores de OpenStreetMap.</p><p class="p">'+esc(statusTxt())+'</p></div></section>';
+  if(WEB){
+    h+='<section class="block"><h3>Respaldo</h3><div class="card"><p class="p">Tus lugares se guardan solo en este teléfono. '+(lb?'Último respaldo: '+esc(lb)+'.':'Todavía no guardas un respaldo.')+'</p><div class="row-btns"><button type="button" class="btn" data-act="backup">Guardar respaldo</button><button type="button" class="btn" data-act="import-open">Restaurar</button></div>';
+    if(S.importing)h+='<div class="row-btns"><label class="btn">Elegir archivo<input type="file" id="importFile" accept=".json,application/json,text/plain" hidden></label></div><textarea id="importText" class="field" rows="4" placeholder="O pega aquí el texto del respaldo" style="margin-top:10px"></textarea><div class="row-btns"><button type="button" class="btn primary" data-act="import-text">Restaurar texto</button></div>';
+    h+='</div></section>';
+  }
+  h+='<section class="block"><h3>Acerca de</h3><div class="card"><p class="p">Esta app no es un sistema de alerta temprana ni reemplaza a SENAPRED o al SHOA. Ante un sismo fuerte: agáchate, cúbrete y afírmate.</p><p class="p">La probabilidad de sentirse es una estimación con un modelo de atenuación publicado (Allen, Wald y Worden, 2012), ajustado con sismos chilenos.</p><p class="p">¿Está temblando? · versión '+VERSION+'</p></div></section>';
+  return h;
+}
+function renderSettings(){if($('#settingsModal').classList.contains('on'))setHTML($('#smBody'),settingsHTML())}
+function movePlace(id,dir){
+  const ps=places(),i=ps.findIndex(p=>p.id===id),j=i+dir;if(i<0||j<0||j>=ps.length)return;
+  [ps[i],ps[j]]=[ps[j],ps[i]];ps.forEach((p,k)=>{if(p.order!==k){const v=Object.assign({},p);delete v.id;v.order=k;Store.put('places',p.id,v)}});
+}
+function removePlace(id){
+  const p=Store.get('places',id);if(!p)return;
+  Store.del('places',id);
+  if(S.placeId===id){const f=places()[0];S.placeId=f?f.id:null;lsSet('place',S.placeId)}
+  toast('Lugar borrado',{label:'Deshacer',fn:()=>{Store.put('places',id,p)}});
+}
+
+/* ---------------- acciones ---------------- */
+const ACTIONS={
+  big:()=>onBig(),
+  chip:(el,id)=>{if(id===S.placeId)return;haptic();S.placeId=id;lsSet('place',id);S.lastK='';renderChips();renderAnswer();if(S.asked&&(!S.data||S.data.quality==='none'||Date.now()-S.lastFetch>120000))refresh(false)},
+  settings:()=>{S.importing=false;setHTML($('#smBody'),settingsHTML());showModal('settingsModal')},
+  'settings-close':()=>closeModal('settingsModal'),
+  'modal-close':()=>{if($('#placeModal').classList.contains('on'))closeModal('placeModal');else closeModal('settingsModal')},
+  theme:el=>{lsSet('theme',el.dataset.theme);applyTheme();renderSettings()},
+  'sensor-toggle':()=>{lsSet('sensor',lsGet('sensor')===false);haptic();renderSettings()},
+  'place-new':()=>{if(places().length>=6){toast('Máximo 6 lugares');return}openPlace('new',{name:places().length?'':'Casa'})},
+  'place-edit':(el,id)=>openPlace('edit',{id}),
+  'place-up':(el,id)=>{movePlace(id,-1);renderSettings()},
+  'place-down':(el,id)=>{movePlace(id,1);renderSettings()},
+  'place-cancel':()=>closeModal('placeModal'),
+  'place-save':()=>{
+    const name=($('#pmName').value||'').trim().slice(0,24);if(!name||!PM.loc)return;
+    haptic();const first=!places().length;
+    savePlace({name,lat:PM.loc.lat,lon:PM.loc.lon,label:PM.loc.label||''},PM.mode==='edit'?PM.id:null);
+    closeModal('placeModal');toast(PM.mode==='edit'?'Guardado':'Lugar guardado');
+    if(first)enableMoment();renderSettings();
+  },
+  'pm-sug':el=>{$('#pmName').value=el.dataset.v;renderPM()},
+  'pm-gps':()=>{PM.busy='gps';PM.msg='';renderPM();
+    getGPS().then(async c=>{PM.loc={lat:c.lat,lon:c.lon,label:'Ubicación actual'};PM.busy='';renderPM();const l=await reverseLabel(c.lat,c.lon);if(PM.loc&&PM.loc.lat===c.lat){PM.loc.label=l;renderPM()}},
+      e=>{PM.busy='';PM.msg=gpsError(e);renderPM()})},
+  'pm-pick':el=>{const r=PM.results[+el.dataset.i];if(!r)return;haptic();PM.loc=r;PM.results=[];PM.msg='';renderPM()},
+  'pm-delete':el=>{if(!PM.delArmed){PM.delArmed=true;el.classList.add('armed');el.textContent='Toca otra vez para borrar';return}closeModal('placeModal');removePlace(PM.id);renderSettings()},
+  'onb-gps':()=>{const m=$('#onbMsg');m.textContent='Buscando tu ubicación…';
+    getGPS().then(async c=>{m.textContent='';const id=savePlace({name:'Casa',lat:c.lat,lon:c.lon,label:'Ubicación actual'});toast('Casa guardada');enableMoment();
+      const l=await reverseLabel(c.lat,c.lon);const p=Store.get('places',id);if(p)Store.put('places',id,Object.assign({},p,{label:l}))},
+      e=>{m.textContent=gpsError(e)})},
+  'onb-search':()=>openPlace('new',{name:'Casa',focus:'search'}),
+  backup:()=>shareBackup().then(r=>{if(r==='ok'){toast('Respaldo guardado');renderSettings()}else if(r==='fail')toast('No se pudo crear el respaldo en este teléfono.')}),
+  'import-open':()=>{S.importing=true;renderSettings()},
+  'import-text':()=>{const n=Store.importJSON(($('#importText')||{}).value);toast(n<0?'Ese texto no es un respaldo válido.':'Se restauraron '+n+' lugares');if(n>=0){S.importing=false;renderSettings()}},
+  install:()=>{if(installEvt){const ev=installEvt;installEvt=null;try{ev.prompt();ev.userChoice.finally(renderShell)}catch(err){}}},
+  'install-x':()=>{lsSet('install-hint',true);renderShell()}
+};
+function enableMoment(){$wrap.classList.remove('enable');void $wrap.offsetWidth;$wrap.classList.add('enable');setTimeout(()=>$wrap.classList.remove('enable'),1500)}
+
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');if(!el)return;
+  const li=el.closest('[data-id]'),id=el.dataset.id||(li?li.dataset.id:null),f=ACTIONS[el.dataset.act];
+  if(f)f(el,id,li,e);
+});
+document.addEventListener('submit',e=>{if(e.target.id==='pmSearch'){e.preventDefault();const q=($('#pmQ').value||'').trim();if(q.length<3){PM.msg='Escribe al menos 3 letras.';renderPM();return}try{$('#pmQ').blur()}catch(err){}searchPlaces(q)}});
+document.addEventListener('input',e=>{if(e.target.id==='pmName')renderPM()});
+document.addEventListener('change',e=>{
+  if(e.target.id!=='importFile')return;const f=e.target.files&&e.target.files[0];if(!f)return;
+  f.text().then(t=>{const n=Store.importJSON(t);toast(n<0?'Ese archivo no es un respaldo válido.':'Se restauraron '+n+' lugares');if(n>=0){S.importing=false;renderSettings()}}).catch(()=>toast('No se pudo leer el archivo.'));
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=[...document.querySelectorAll('.modal.on')].pop();if(m)closeModal(m.id)}});
+if(WEB){
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;renderShell()});
+  window.addEventListener('appinstalled',()=>{installEvt=null;lsSet('install-hint',true);renderShell()});
+  if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{})});
+  let asked=false;Store.onChange(()=>{if(!asked&&navigator.storage&&navigator.storage.persist&&places().length){asked=true;navigator.storage.persist().catch(()=>{})}});
+}
+
+/* ---------------- inicio ---------------- */
+document.querySelectorAll('[data-icon]').forEach(el=>el.insertAdjacentHTML('afterbegin',icon(el.dataset.icon)));
+applyTheme();
+Store.onChange(()=>{renderShell();renderAnswer();renderSettings()});
+Store.start();
+renderShell();
+})();
+</script>
+</body>
+</html>
