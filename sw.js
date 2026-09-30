@@ -1,6 +1,6 @@
 /* Service worker: la app abre sin internet y se actualiza sola.
-   build.py reemplaza estatemblando, 4425f8d6 (hash del index) y ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png"] (archivos a guardar). */
-const CORE='estatemblando-core-4425f8d6';   /* nombres únicos por app: varias apps comparten el mismo origen en github.io */
+   build.py reemplaza estatemblando, 9bc8fa94 (hash del index) y ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png"] (archivos a guardar). */
+const CORE='estatemblando-core-9bc8fa94';   /* nombres únicos por app: varias apps comparten el mismo origen en github.io */
 const FONTS='estatemblando-fonts';
 const FILES=["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png"];
 

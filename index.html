@@ -329,9 +329,8 @@ const WEB=MODE==='web';
 const APP_ID='estatemblando';  /* prefijo de los datos en el teléfono: no cambiarlo nunca */
 const COLS=['places'];
 const VERSION='1.0';
-/* Dirección del Worker de Cloudflare (tu intermediario de datos del CSN).
-   Reemplaza TU-SUBDOMINIO por el tuyo. Mientras no esté, la app usa los registros internacionales de respaldo. */
-const API_URL='https://estatemblando.TU-SUBDOMINIO.workers.dev';
+/* Dirección del Worker de Cloudflare (intermediario de datos del CSN). Si falla, la app usa los registros internacionales de respaldo. */
+const API_URL='https://estatemblando.esteban-lands.workers.dev';
 
 /*CORE-START*/
 /* Lógica pura, sin DOM. Se prueba en Node:  TZ=America/Santiago node test.js */
