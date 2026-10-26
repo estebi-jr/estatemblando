@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Teaser · ¿Está temblando?</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#EDEDF1}
+#bg{position:absolute;left:0;top:0;width:1920px;height:1080px}
+#rig{position:absolute;left:0;top:0;width:458px;height:960px;transform-origin:0 0}
+/* teléfono genérico, sin marca */
+.phone{position:absolute;inset:0;border-radius:71px;background:linear-gradient(160deg,#2a2a2e 0%,#111113 45%,#0a0a0b 100%);
+  box-shadow:0 0 0 1.5px #4a4a4f,0 0 0 3px #1a1a1c,0 70px 110px -48px rgba(30,30,40,.42),0 34px 60px -34px rgba(30,30,40,.30)}
+.side{position:absolute;width:5px;border-radius:2px;background:linear-gradient(90deg,#3d3d42,#1d1d20)}
+.side.l{left:-5px}.side.r{right:-5px}
+.screen{position:absolute;left:14px;top:14px;width:430px;height:932px;border-radius:57px;overflow:hidden;background:#F2F2F7;isolation:isolate}
+#app{position:absolute;left:0;top:0;width:430px;height:932px;border:0;display:block}
+.status{position:absolute;left:0;top:0;width:430px;height:54px;pointer-events:none;color:#000}
+.status .time{position:absolute;left:0;width:150px;top:17px;text-align:center;font:600 17px/22px "Inter Teaser",Inter,sans-serif;letter-spacing:-.01em;padding-left:8px;box-sizing:border-box}
+.status svg{position:absolute;top:21px}
+.island{position:absolute;top:11px;left:50%;width:126px;height:37px;margin-left:-63px;border-radius:19px;background:#000}
+.homebar{position:absolute;bottom:8px;left:50%;width:140px;height:5px;margin-left:-70px;border-radius:3px;background:#000;opacity:.85;pointer-events:none}
+/* toque visible */
+.tap{position:absolute;left:0;top:0;width:66px;height:66px;margin:-33px 0 0 -33px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.78) 0%,rgba(255,255,255,.62) 60%,rgba(255,255,255,.45) 100%);
+  box-shadow:0 0 0 2px rgba(255,255,255,.92),0 6px 22px rgba(60,0,0,.28);opacity:0;pointer-events:none}
+.ring{position:absolute;left:0;top:0;width:66px;height:66px;margin:-33px 0 0 -33px;border-radius:50%;box-shadow:0 0 0 2.5px rgba(255,255,255,.9);opacity:0;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="bg" width="1920" height="1080"></canvas>
+<div id="rig">
+  <div class="side l" style="top:178px;height:34px"></div>
+  <div class="side l" style="top:246px;height:64px"></div>
+  <div class="side l" style="top:324px;height:64px"></div>
+  <div class="side r" style="top:290px;height:104px"></div>
+  <div class="phone"></div>
+  <div class="screen" id="screen">
+    <iframe id="app" src="app/index.html" scrolling="no"></iframe>
+    <div class="status">
+      <div class="time">16:42</div>
+      <svg style="left:300px" width="19" height="12" viewBox="0 0 19 12" aria-hidden="true"><g fill="#000"><rect x="0" y="8" width="3.2" height="4" rx="1"/><rect x="5" y="5.5" width="3.2" height="6.5" rx="1"/><rect x="10" y="3" width="3.2" height="9" rx="1"/><rect x="15" y="0" width="3.2" height="12" rx="1"/></g></svg>
+      <svg style="left:325px" width="17" height="12" viewBox="0 0 17 12" aria-hidden="true"><g fill="#000"><path d="M8.5 2.3c2.5 0 4.8 1 6.5 2.6l1.3-1.3C14.2 1.6 11.5.4 8.5.4S2.8 1.6.7 3.6L2 4.9c1.7-1.6 4-2.6 6.5-2.6z"/><path d="M8.5 5.9c1.5 0 2.9.6 3.9 1.5l1.3-1.3c-1.4-1.3-3.2-2.1-5.2-2.1s-3.8.8-5.2 2.1l1.3 1.3c1-.9 2.4-1.5 3.9-1.5z"/><path d="M8.5 9.4c.6 0 1.1.2 1.4.6L8.5 11.6 7.1 10c.3-.4.8-.6 1.4-.6z"/></g></svg>
+      <svg style="left:350px" width="28" height="13" viewBox="0 0 28 13" aria-hidden="true"><rect x=".5" y=".5" width="23.5" height="12" rx="3.8" fill="none" stroke="#000" stroke-opacity=".38"/><rect x="2.2" y="2.2" width="17.5" height="8.6" rx="2.3" fill="#000"/><path d="M25.6 4.4v4.2c.8-.3 1.4-1.1 1.4-2.1s-.6-1.8-1.4-2.1z" fill="#000" fill-opacity=".4"/></svg>
+    </div>
+    <div class="island"></div>
+    <div class="homebar"></div>
+    <div class="ring" id="ring"></div>
+    <div class="tap" id="tap"></div>
+  </div>
+</div>
+<script src="director.js"></script>
+</body>
+</html>
